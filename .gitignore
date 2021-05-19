@@ -7,3 +7,4 @@ package-lock.json
 admin/credentials.js
 
 controllers/folderControllersv1.js
+folders.json
