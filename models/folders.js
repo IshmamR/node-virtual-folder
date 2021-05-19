@@ -2,18 +2,22 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const folderSchema = new Schema ({
-	title: {
+	name: {
 		type: String,
 		required: true
 	},
-	parent: {
+	root: {
+		type: Boolean,
+		required: true
+	},
+	parent_id: {
 		type: String,
 		required: true
 	},
-	child: [{
+	children: [{
 		type: String
 	}]
 });
-const Model = mongoose.Model('Folder', folderSchema);
+const Model = mongoose.model('Folder', folderSchema);
 
 module.exports = Model;

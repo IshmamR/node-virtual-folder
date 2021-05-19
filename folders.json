@@ -3,29 +3,6 @@
         "_id": "1",
         "name": "Folder 1",
         "parent_id": null,
-        "children": [
-            2,
-            3
-        ]
-    },
-    {
-        "_id": "2",
-        "name": "Folder 2",
-        "parent_id": "1",
-        "children": [
-            4
-        ]
-    },
-    {
-        "_id": "3",
-        "name": "Folder 3",
-        "parent_id": "1",
-        "children": []
-    },
-    {
-        "_id": "4",
-        "name": "Folder 4",
-        "parent_id": "2",
         "children": []
     }
 ]

@@ -3,15 +3,20 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>A</title>
+	<title>API DOC</title>
 </head>
 <body>
 
 	<main>
 		<form onsubmit="return false">
 			<input id="folder_name" type="text" name="name" />
-			<input id="parent_id" type="number" name="parent_id" />
+			<input id="parent_id" type="text" name="parent_id" />
 			<button id="sub">Submit</button>
+		</form>
+		<br />
+		<form onsubmit="return false">
+			<input id="id_to_delete" type="text" name="id" />
+			<button id="del">Delete</button>
 		</form>
 	</main>
 
@@ -19,6 +24,8 @@
 	<script>
 
 		var subBtn = document.querySelector('#sub');
+		var delBtn = document.querySelector('#del');
+		var id = document.querySelector("input#id_to_delete");
 		var folder_name = document.querySelector("input#folder_name");
 		var parent_id = document.querySelector("input#parent_id");
 		console.log(folder_name);
@@ -28,21 +35,23 @@
 				name: folder_name.value,
 				parent_id: parent_id.value
 			};
-			// var bodyData = { id: parent_id.value };
-			// console.log(bodyData);
-			postData('/folders', bodyData)
-			.then(data => {
-				console.log(data); // JSON data parsed by `data.json()` call
-			});
-
+			postData('/folders', bodyData, 'POST')
+			.then(data => console.log(data))
+			.catch(err => console.log(err));
+		}
+		delBtn.onclick = () => {
+			var bodyData = { id: id.value };
+			postData('/folders', bodyData, 'DELETE')
+			.then(data => console.log(data))
+			.catch(err => console.log(err));
 		}
 
 	
 		// Funtion for post request with fetch
-		async function postData(url = '', data = {}) {
+		async function postData(url = '', data = {}, method) {
 			// Default options are marked with *
 			const response = await fetch(url, {
-				method: 'POST', // *GET, POST, PUT, DELETE, etc.
+				method: method, // *GET, POST, PUT, DELETE, etc.
 				mode: 'cors', // no-cors, *cors, same-origin
 				cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
 				credentials: 'same-origin', // include, *same-origin, omit

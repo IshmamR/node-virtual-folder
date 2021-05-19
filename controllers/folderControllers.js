@@ -1,117 +1,136 @@
 const express = require('express');
+const mongoose = require('mongoose');
 
-const fs = require('fs');
-const path = require('path');
+const Folder = require('../models/folders');
 
-const stringData = fs.readFileSync(path.join(__dirname, '../folders.json'), 'utf8');
-// console.log(stringData); // string
-const foldersData = JSON.parse(stringData); // json data
 
 // Get all folders
 const getAll = (req, res) => {
-	if (foldersData.length > 0) {
-		res.status(200);
-		res.json(foldersData);
-	} else {
-		res.status(404);
-		res.json({error: "No data exists"});
-	}
+	Folder.find()
+		.exec()
+		.then(docs => {
+			// console.log('All docs from DB: '+docs);
+			if(docs) res.status(200).json(docs);
+			else res.status(404).json({ error: "No data found." });
+		})
+		.catch(err => {
+			// console.log(err);
+			res.status(500).json({ error: err });
+		});
 }
 
 // Get single folder by id
 const getSingle = (req, res) => {
-	const singleData = foldersData.find(t => t._id === req.params.id);
-	if (singleData) {
-		res.status(200);
-		res.json(singleData);
-	} else {
-		res.status(404);
-		res.json({error: "No such folder"});
-	}
+	const id = req.params.id;
+	Folder.findById(id)
+		.exec()
+		.then(doc => {
+			// console.log("From DB: "+doc);
+			if(doc) res.status(200).json(doc);
+			else res.status(404).json({ error: "Not a valid Id" });
+		})
+		.catch(err => {
+			// console.log(err);
+			res.status(500).json({ error: err });
+		});
 }
 
 // Insert a folder
-const insertFodler = (req, res) => {
-	let id = foldersData.length + 1;
+const insertFolder = (req, res) => {
 	let children = [];
 	
-	let new_folder_body = {
-		"_id": String(id),
-		"name": req.body.name,
-		"parent_id": req.body.parent_id,
-		"children": children
-	}
-	
-	// console.log(req.body);
-	foldersData.push(new_folder_body);
-	updateParentFolder(req, res, id, req.body.parent_id);
+	// mongoose object
+	const folder = new Folder({
+		name: req.body.name,
+		root: false,
+		parent_id: req.body.parent_id,
+		// root: true, parent_id: "no_ne", // For root folder
+		children: children
+	});
 
-	fs.writeFile(
-		path.join(__dirname, '../folders.json'), 
-		JSON.stringify(foldersData, null, 4), 
-		(err) => {
-			if (err) {
-				console.log(err);
-				res.status(500);
-				res.json({error: "Server could not update the folder"});
-			}
-			else {
-				res.status(200);
-				res.json(new_folder_body);
-			}
-		}
-	);
-}
-
-// Update a folder
-const updateParentFolder = (req, res, id, parent_id) => {
-	// console.log('Updating Parent Folder');
-	const folderToUpdate = foldersData.find(obj => obj._id === parent_id);
-	folderToUpdate.children.push(id);
-	// console.log(folderToUpdate);
+	folder.save()
+		.then(result => {
+			updateParentFolder(req, res, result._id, result.parent_id, 'inserted');
+			res.status(200).json({
+				message: "Handling POST request to /folders",
+				createdFolder: result
+			});
+		}).catch(err => {
+			// console.log(err);
+			res.status(500).json({ error: "Could not post the folder" });
+		});
 }
 
 // Delete a folder
 const deleteFolder = (req, res) => {
-	
-	const folder_to_delete = foldersData.find(obj => obj._id === req.body.id);
-	const index = foldersData.indexOf(folder_to_delete);
-	
-	if (id == 1) {
-		res.status(404);
-		res.json({error: "Root folder cannot be deleted"});
-		return 1;
-	}
+	var folder_to_delete;
 
-	if(index !== -1) {
-		foldersData.splice(index, 1);
-		fs.writeFile(
-			path.join(__dirname, '../folders.json'), 
-			JSON.stringify(foldersData, null, 4), 
-			(err) => {
-				if (err) {
-					console.log(err);
-					res.status(500);
-					res.json({error: "Server could not update the folder"});
-				}
-				else {
-					res.status(200);
-					res.json(foldersData);
-				}
+	Folder.findById(req.body.id)
+		.exec()
+		.then(doc => {
+			if(doc) {
+				folder_to_delete = doc;
+				
+				if(doc.parent_id !== 'no_one' && !doc.root) {
+					Folder.remove({_id: req.body.id})
+						.exec()
+						.then(result => {
+							updateParentFolder(req, res, doc._id, doc.parent_id, 'deleted');
+							deleteChildrenFolders(doc._id, doc.children);
+							
+							res.status(200).json({
+								message: "Handling DELETE request to /folders",
+								deletedFolder: result
+							});
+						})
+						.catch(err => res.status(500).json({ error: err }) );
+				} 
+				else res.status(404).json({ error: "Cannot delete ROOT folder!" });
 			}
-		);
-	} else {
-		res.status(404);
-		res.json({error: "No such folder exists to delete"})
-	}
+			else res.status(404).json({ error: "Not a valid Id" });
+		})
+		.catch(err => res.status(500).json({ error: err }) );
+}
+
+// Update parent folder
+const updateParentFolder = (req, res, id, parent_id, func) => {
+	
+	var child_array;
+	Folder.findById(parent_id)
+		.exec()
+		.then(doc => {
+			child_array = doc.children;
+			// console.log(child_array);
+
+			if (func === 'inserted') {
+				child_array.push(id);
+				// console.log(child_array);
+				Folder.update({ _id: parent_id }, { $set: { children: child_array } })
+					.exec()
+					.then(result => console.log("Updated parent after posting Folder:"+ id) )
+					.catch(err => console.log(err) );
+			}
+			else if (func === 'deleted') {
+				const index = child_array.indexOf(id);
+				child_array.splice(index, 1);
+				// console.log('Children: '+ child_array);
+				Folder.where({ _id: parent_id }).update({ children: child_array })
+					.exec()
+					.then(result => console.log("Updated parent after deleting Folder:"+ id) )
+					.catch(err => console.log(err) );
+			}
+		})
+		.catch(err => console.log(err) );
+}
+// Delete children folders (Only if deleted folder)
+const deleteChildrenFolders = (id, children_array) => {
+	Folder.deleteMany({ parent_id: id })
+		.exec()
+		.then(result => {
+			console.log('Children of Folder:'+ id +' deleted');
+		})
+		.catch(err => console.log(err) );
 }
 
 
-
-
-
-
-
-
-
-module.exports = { getAll, getSingle, insertFodler, deleteFolder };
+module.exports = { getAll, getSingle, insertFolder, deleteFolder };
