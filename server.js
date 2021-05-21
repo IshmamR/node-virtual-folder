@@ -14,6 +14,7 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors({"origin": "*"})); // CORS 
+app.use(express.static('public'));
 
 // Connect to mongodb
 const dbURI = `mongodb+srv://ishmam:${process.env.MONGO_PASS}@ishita.oa6bd.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;

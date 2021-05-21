@@ -3,6 +3,7 @@
         "_id": "1",
         "name": "Folder 1",
         "parent_id": null,
+        "root": true,
         "children": []
     }
 ]

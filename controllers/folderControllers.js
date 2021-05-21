@@ -30,7 +30,7 @@ const getSingle = (req, res) => {
 			else res.status(404).json({ error: "Not a valid Id" });
 		})
 		.catch(err => {
-			// console.log(err);
+			console.log(err);
 			res.status(500).json({ error: err });
 		});
 }
